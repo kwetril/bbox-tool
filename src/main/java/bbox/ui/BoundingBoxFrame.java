@@ -2,26 +2,32 @@ package bbox.ui;
 
 import bbox.model.BoundingBox;
 import bbox.model.BoundingBoxLoader;
+import bbox.model.ImageFileWrapper;
+import bbox.ui.utils.LayoutHelper;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.BevelBorder;
+import javax.swing.filechooser.FileFilter;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import javax.imageio.ImageIO;
-import javax.swing.filechooser.FileFilter;
-import javax.swing.filechooser.FileNameExtensionFilter;
 
 public class BoundingBoxFrame extends JFrame {
     private ImagePanel imagePanel;
     private JLabel statusLabel;
     private JButton newBoxButton;
     private JButton saveBoxButton;
+    private JList imagesList;
+    private DefaultListModel listModel;
     private File lastOpenedFile;
+    private File[] openedFiles;
 
     public BoundingBoxFrame() {
         setTitle("Bounding Box Tool");
+        setIconImage(getLogoImage());
         setMinimumSize(new Dimension(800, 600));
         JMenuBar menuBar = createMenu();
         setJMenuBar(menuBar);
@@ -58,10 +64,16 @@ public class BoundingBoxFrame extends JFrame {
             FileFilter imageFilter = new FileNameExtensionFilter("Image files", ImageIO.getReaderFileSuffixes());
             imageChooser.addChoosableFileFilter(imageFilter);
             imageChooser.setAcceptAllFileFilterUsed(false);
+            imageChooser.setMultiSelectionEnabled(true);
             int result = imageChooser.showSaveDialog(this);
             if (result == JFileChooser.APPROVE_OPTION) {
-                lastOpenedFile = imageChooser.getSelectedFile();
-                openImage(lastOpenedFile);
+                openedFiles = imageChooser.getSelectedFiles();
+                lastOpenedFile = openedFiles[0];
+                listModel.clear();
+                for (File openedFile : openedFiles) {
+                    listModel.addElement(new ImageFileWrapper(openedFile));
+                }
+                imagesList.setSelectedIndex(0);
             }
         });
         fileMenu.add(openImageMenuItem);
@@ -71,13 +83,21 @@ public class BoundingBoxFrame extends JFrame {
 
     private JPanel createToolPanel() {
         JPanel toolPanel = new JPanel();
-        toolPanel.setBorder(BorderFactory.createLineBorder(Color.black));
+        toolPanel.setBorder(BorderFactory.createMatteBorder(0, 1, 0, 0, Color.black));
+        LayoutHelper.setWidth(toolPanel, 250);
+
+        JPanel box = new JPanel();
+        box.setLayout(new BoxLayout(box, BoxLayout.Y_AXIS));
+        box.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         newBoxButton = new JButton("New box");
-        newBoxButton.addActionListener(actionEvent -> {
-            imagePanel.newBoundingBox();
-        });
+        newBoxButton.addActionListener(actionEvent -> imagePanel.newBoundingBox());
         newBoxButton.setEnabled(false);
-        toolPanel.add(newBoxButton);
+        newBoxButton.setAlignmentX(CENTER_ALIGNMENT);
+        LayoutHelper.setWidth(newBoxButton, 230);
+        box.add(newBoxButton);
+
+        box.add(Box.createRigidArea(new Dimension(0, 10)));
+
         saveBoxButton = new JButton("Save");
         saveBoxButton.addActionListener(actionEvent -> {
             if (imagePanel.getActiveBox() != null) {
@@ -85,8 +105,45 @@ public class BoundingBoxFrame extends JFrame {
             }
         });
         saveBoxButton.setEnabled(false);
-        toolPanel.add(saveBoxButton);
+        saveBoxButton.setAlignmentX(CENTER_ALIGNMENT);
+        LayoutHelper.setWidth(saveBoxButton, 230);
+        box.add(saveBoxButton);
+
+        box.add(Box.createRigidArea(new Dimension(0, 10)));
+
+        JLabel imagesListLabel = new JLabel("List of images:");
+        imagesListLabel.setAlignmentX(CENTER_ALIGNMENT);
+        LayoutHelper.setWidth(imagesListLabel, 230);
+        box.add(imagesListLabel);
+
+        box.add(Box.createRigidArea(new Dimension(0, 5)));
+
+        listModel = new DefaultListModel();
+        imagesList = new JList(listModel);
+        imagesList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        imagesList.setVisibleRowCount(5);
+        imagesList.setLayoutOrientation(JList.VERTICAL);
+        imagesList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                JList list = (JList) e.getSource();
+                File selectedFile = (File) list.getSelectedValue();
+                if (selectedFile != null) {
+                    lastOpenedFile = selectedFile;
+                    openImage(lastOpenedFile);
+                }
+            }
+        });
+        JScrollPane listScroller = new JScrollPane(imagesList);
+        LayoutHelper.setWidth(listScroller, 230);
+        box.add(listScroller);
+
+        toolPanel.add(box, BorderLayout.CENTER);
         return toolPanel;
+    }
+
+    private Image getLogoImage() {
+        ImageIcon img = new ImageIcon(getClass().getResource("/logo.png"));
+        return img.getImage();
     }
 
     private JPanel createStatusPanel() {
