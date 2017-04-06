@@ -1,3 +1,12 @@
+.idea/
+*~
+target/
+project/target/
+*.out
+*.log
+metastore_db/
+\#*
+
 *.class
 
 # Mobile Tools for Java (J2ME)
