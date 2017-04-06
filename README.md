@@ -17,3 +17,4 @@ Tool to draw bounding boxes on images. May be used to create object detection da
 
 - https://github.com/tzutalin/labelImg
 - https://github.com/alexklaeser/imgAnnotation
+- https://github.com/cvhciKIT/sloth
